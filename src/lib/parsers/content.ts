@@ -1,5 +1,5 @@
-import * as cheerio from "cheerio"
 import { ContentAnalysis } from "@/types"
+import { CheerioDoc } from "./parse-html"
 
 // Matches score-seo.mjs banned word list
 const BANNED_WORDS = [
@@ -59,22 +59,22 @@ const CTA_PATTERNS = [
 ]
 
 export function analyzeContent(
-  html: string,
+  $: CheerioDoc,
   pageUrl: string
 ): ContentAnalysis {
-  const $ = cheerio.load(html)
-
-  // Count h2s before removing elements
+  // Count h2s and detect CTA BEFORE removing elements
   const h2Count = $("h2").length
 
-  // Remove non-content elements
-  $("script, style, nav, header, footer, noscript, svg, iframe").remove()
+  const fullHtml = $.html() || ""
+  let ctaFound = false
+  for (const pattern of CTA_PATTERNS) {
+    if (pattern.test(fullHtml)) {
+      ctaFound = true
+      break
+    }
+  }
 
-  const bodyText = $("body").text()
-  const words = bodyText.split(/\s+/).filter((w) => w.length > 0)
-  const wordCount = words.length
-
-  // Count links
+  // Count links before removing nav/header/footer
   let internalLinks = 0
   let externalLinks = 0
   let pageOrigin: string
@@ -87,6 +87,14 @@ export function analyzeContent(
   $("a[href]").each((_, el) => {
     const href = $(el).attr("href")
     if (!href) return
+    if (href.startsWith("#")) {
+      internalLinks++
+      return
+    }
+    if (href.startsWith("/") || href.startsWith(".")) {
+      internalLinks++
+      return
+    }
     try {
       const linkUrl = new URL(href, pageUrl)
       if (linkUrl.origin === pageOrigin) {
@@ -95,25 +103,16 @@ export function analyzeContent(
         externalLinks++
       }
     } catch {
-      if (
-        href.startsWith("/") ||
-        href.startsWith("#") ||
-        href.startsWith(".")
-      ) {
-        internalLinks++
-      }
+      internalLinks++
     }
   })
 
-  // CTA detection
-  const fullHtml = $.html() || ""
-  let ctaFound = false
-  for (const pattern of CTA_PATTERNS) {
-    if (pattern.test(fullHtml)) {
-      ctaFound = true
-      break
-    }
-  }
+  // Remove non-content elements for text analysis
+  $("script, style, nav, header, footer, noscript, svg, iframe").remove()
+
+  const bodyText = $("body").text()
+  const words = bodyText.split(/\s+/).filter((w) => w.length > 0)
+  const wordCount = words.length
 
   // Banned word detection (unique matches, like score-seo.mjs)
   const matches = bodyText.match(BANNED_RE) || []

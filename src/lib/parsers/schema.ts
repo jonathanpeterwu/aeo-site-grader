@@ -1,5 +1,5 @@
-import * as cheerio from "cheerio"
 import { SchemaData } from "@/types"
+import { CheerioDoc } from "./parse-html"
 
 function findTypes(obj: unknown, target: string): boolean {
   if (!obj || typeof obj !== "object") return false
@@ -24,7 +24,6 @@ function countFaqItems(obj: unknown): number {
   if (Array.isArray(obj)) return obj.reduce((sum, item) => sum + countFaqItems(item), 0)
   const record = obj as Record<string, unknown>
 
-  // Check @graph
   if (record["@graph"] && Array.isArray(record["@graph"])) {
     return (record["@graph"] as unknown[]).reduce(
       (sum: number, item) => sum + countFaqItems(item),
@@ -32,7 +31,6 @@ function countFaqItems(obj: unknown): number {
     )
   }
 
-  // If this is a FAQPage, count mainEntity items
   if (record["@type"] === "FAQPage" && Array.isArray(record.mainEntity)) {
     return (record.mainEntity as unknown[]).length
   }
@@ -40,8 +38,7 @@ function countFaqItems(obj: unknown): number {
   return 0
 }
 
-export function extractSchemaData(html: string): SchemaData {
-  const $ = cheerio.load(html)
+export function extractSchemaData($: CheerioDoc): SchemaData {
   const jsonLdBlocks: Record<string, unknown>[] = []
   let hasFaq = false
   let hasSpeakable = false
@@ -69,7 +66,6 @@ export function extractSchemaData(html: string): SchemaData {
     }
   })
 
-  // Also count visible FAQ-like patterns in HTML (accordion, details/summary)
   if (faqCount === 0) {
     const faqSections = $('[itemtype*="FAQPage"], .faq, #faq, [data-faq]')
     if (faqSections.length > 0) {

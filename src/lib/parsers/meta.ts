@@ -1,9 +1,7 @@
-import * as cheerio from "cheerio"
 import { MetaTags } from "@/types"
+import { CheerioDoc } from "./parse-html"
 
-export function extractMetaTags(html: string): MetaTags {
-  const $ = cheerio.load(html)
-
+export function extractMetaTags($: CheerioDoc): MetaTags {
   const title = $("title").first().text().trim() || null
 
   const description =

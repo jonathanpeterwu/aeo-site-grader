@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { fetchPageData } from "@/lib/fetcher"
+import { parseHtml } from "@/lib/parsers/parse-html"
 import { extractMetaTags } from "@/lib/parsers/meta"
 import { extractSchemaData } from "@/lib/parsers/schema"
 import { analyzeRobotsTxt } from "@/lib/parsers/robots"
@@ -70,16 +71,19 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Parse
-    const meta = extractMetaTags(data.html)
-    const schema = extractSchemaData(data.html)
+    // Parse HTML once — share $ across all parsers
+    const $ = parseHtml(data.html)
+
+    // Run all parsers on shared $ (no redundant cheerio.load calls)
+    const meta = extractMetaTags($)
+    const schema = extractSchemaData($)
+    const content = analyzeContent($, data.resolvedUrl)
+    const aiSignals = analyzeAIEngineSignals($, data.robotsTxt)
+    const aiDiagnostics = diagnoseAIEngines(aiSignals)
+
+    // These don't need HTML parsing
     const robots = analyzeRobotsTxt(data.robotsTxt)
     const sitemap = analyzeSitemap(data.sitemapXml)
-    const content = analyzeContent(data.html, data.resolvedUrl)
-
-    // AI engine signals (not scored, diagnostic only)
-    const aiSignals = analyzeAIEngineSignals(data.html, data.robotsTxt)
-    const aiDiagnostics = diagnoseAIEngines(aiSignals)
 
     // Grade
     const report = gradeUrl(
@@ -91,28 +95,23 @@ export async function POST(req: NextRequest) {
       sitemap
     )
 
-    // Attach AI diagnostics to report
+    // Attach AI diagnostics
     report.aiEngineDiagnostics = aiDiagnostics
 
     // Consume credit
     consumeCredit(sessionId, url)
 
-    // Generate suggestions (gated by plan)
+    // Generate suggestions once — reuse for both count and full data
     const allChecks = report.categories.flatMap((c) => c.checks)
+    const allSuggestions = generateSuggestions(allChecks)
     const hasSuggestions = canViewSuggestions(sessionId)
-    const suggestions = hasSuggestions
-      ? generateSuggestions(allChecks)
-      : null
-
-    // For free users, show suggestion count as a teaser
-    const suggestionCount = generateSuggestions(allChecks).length
 
     const plan = getPlan(sessionId)
 
     return NextResponse.json({
       report,
-      suggestions,
-      suggestionCount,
+      suggestions: hasSuggestions ? allSuggestions : null,
+      suggestionCount: allSuggestions.length,
       creditsRemaining: getRemaining(sessionId),
       isHomePage: isHomePageUrl(url),
       currentPlan: plan.planId,
