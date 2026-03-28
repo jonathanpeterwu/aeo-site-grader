@@ -8,6 +8,7 @@ import { Suggestion } from "@/lib/suggestions"
 import ReportDashboard from "@/components/ReportDashboard"
 import { SuggestionsPanel } from "@/components/SuggestionsPanel"
 import { AIEngineDiagnostics } from "@/components/AIEngineDiagnostics"
+import { AIDiscoveryPanel } from "@/components/AIDiscoveryPanel"
 
 function ThemeToggle() {
   const [dark, setDark] = useState(false)
@@ -210,6 +211,9 @@ function HomeContent() {
       {report && (
         <div className="space-y-6">
           <ReportDashboard report={report} />
+          {report.aiDiscovery && (
+            <AIDiscoveryPanel discovery={report.aiDiscovery} />
+          )}
           {report.aiEngineDiagnostics && (
             <AIEngineDiagnostics diagnostics={report.aiEngineDiagnostics} />
           )}

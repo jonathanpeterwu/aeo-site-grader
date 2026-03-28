@@ -10,6 +10,7 @@ import {
   analyzeAIEngineSignals,
   diagnoseAIEngines,
 } from "@/lib/parsers/ai-engines"
+import { analyzeAIDiscovery } from "@/lib/parsers/ai-discovery"
 import { gradeUrl } from "@/lib/grader"
 import {
   canAnalyze,
@@ -84,6 +85,13 @@ export async function POST(req: NextRequest) {
     // These don't need HTML parsing
     const robots = analyzeRobotsTxt(data.robotsTxt)
     const sitemap = analyzeSitemap(data.sitemapXml)
+    const aiDiscovery = analyzeAIDiscovery(
+      data.robotsTxt,
+      data.sitemapXml,
+      data.llmsTxt,
+      data.llmsFullTxt,
+      data.aiPluginJson
+    )
 
     // Grade
     const report = gradeUrl(
@@ -95,8 +103,9 @@ export async function POST(req: NextRequest) {
       sitemap
     )
 
-    // Attach AI diagnostics
+    // Attach AI diagnostics + discovery
     report.aiEngineDiagnostics = aiDiagnostics
+    report.aiDiscovery = aiDiscovery
 
     // Consume credit
     consumeCredit(sessionId, url)

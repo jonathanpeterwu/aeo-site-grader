@@ -40,12 +40,33 @@ export interface AnalysisReport {
   overallPercentage: number
   overallGrade: "A" | "B" | "C" | "D"
   aiEngineDiagnostics?: AIEngineDiagnosticResult[]
+  aiDiscovery?: {
+    hasLlmsTxt: boolean
+    llmsTxtLength: number
+    llmsTxtSections: string[]
+    hasLlmsFullTxt: boolean
+    llmsFullTxtLength: number
+    hasAiPlugin: boolean
+    aiPluginName: string | null
+    aiPluginDescription: string | null
+    aiBotRules: { bot: string; allowed: boolean }[]
+    blockedBots: string[]
+    allowedBots: string[]
+    sitemapUrlCount: number
+    sitemapFreshPages: number
+    sitemapStalePages: number
+    oldestLastmod: string | null
+    newestLastmod: string | null
+  }
 }
 
 export interface FetchedData {
   html: string
   robotsTxt: string | null
   sitemapXml: string | null
+  llmsTxt: string | null
+  llmsFullTxt: string | null
+  aiPluginJson: Record<string, unknown> | null
   url: string
   resolvedUrl: string
 }
