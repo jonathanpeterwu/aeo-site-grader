@@ -7,7 +7,7 @@ export interface AnalysisRequest {
 export interface CheckResult {
   id: string
   name: string
-  category: "SEO" | "AEO" | "CTA" | "GEO"
+  category: "SEO" | "AEO" | "CTA" | "GEO" | "AI_DISCOVERY"
   score: number
   maxScore: number
   passed: boolean
@@ -15,7 +15,7 @@ export interface CheckResult {
 }
 
 export interface CategoryGrade {
-  category: "SEO" | "AEO" | "CTA" | "GEO"
+  category: "SEO" | "AEO" | "CTA" | "GEO" | "AI_DISCOVERY"
   checks: CheckResult[]
   score: number
   maxScore: number
@@ -40,12 +40,34 @@ export interface AnalysisReport {
   overallPercentage: number
   overallGrade: "A" | "B" | "C" | "D"
   aiEngineDiagnostics?: AIEngineDiagnosticResult[]
+  aiDiscovery?: {
+    hasLlmsTxt: boolean
+    llmsTxtLength: number
+    llmsTxtSections: string[]
+    hasLlmsFullTxt: boolean
+    llmsFullTxtLength: number
+    hasAiPlugin: boolean
+    aiPluginName: string | null
+    aiPluginDescription: string | null
+    aiBotRules: { bot: string; allowed: boolean }[]
+    blockedBots: string[]
+    allowedBots: string[]
+    sitemapUrlCount: number
+    sitemapFreshPages: number
+    sitemapStalePages: number
+    oldestLastmod: string | null
+    newestLastmod: string | null
+  }
 }
 
 export interface FetchedData {
   html: string
   robotsTxt: string | null
   sitemapXml: string | null
+  llmsTxt: string | null
+  llmsFullTxt: string | null
+  aiPluginJson: Record<string, unknown> | null
+  securityTxt: string | null
   url: string
   resolvedUrl: string
 }
