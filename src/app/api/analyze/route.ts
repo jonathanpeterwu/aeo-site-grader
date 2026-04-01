@@ -111,8 +111,12 @@ export async function POST(req: NextRequest) {
     report.aiEngineDiagnostics = aiDiagnostics
     report.aiDiscovery = aiDiscovery
 
-    // Persist to site index (long-term domain storage)
-    indexReport(report)
+    // Persist to site index (best-effort — may fail on read-only filesystems like Vercel)
+    try {
+      indexReport(report)
+    } catch {
+      // Filesystem not writable (e.g. Vercel serverless) — skip indexing
+    }
 
     // Consume credit
     consumeCredit(sessionId, url)

@@ -12,15 +12,19 @@ const INDEX_FILE = join(DATA_DIR, "site-index.json")
 const MAX_HISTORY = 50 // keep last 50 snapshots per domain
 
 function ensureDataDir() {
-  if (!existsSync(DATA_DIR)) {
-    mkdirSync(DATA_DIR, { recursive: true })
+  try {
+    if (!existsSync(DATA_DIR)) {
+      mkdirSync(DATA_DIR, { recursive: true })
+    }
+  } catch {
+    // Read-only filesystem (e.g. Vercel serverless) — skip
   }
 }
 
 function readIndex(): Record<string, SiteRecord> {
-  ensureDataDir()
-  if (!existsSync(INDEX_FILE)) return {}
   try {
+    ensureDataDir()
+    if (!existsSync(INDEX_FILE)) return {}
     const raw = readFileSync(INDEX_FILE, "utf-8")
     return JSON.parse(raw)
   } catch {
