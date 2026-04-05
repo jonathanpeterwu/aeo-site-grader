@@ -2,26 +2,7 @@
 
 import { useState } from "react"
 import { AnalysisReport } from "@/types"
-
-const CATEGORY_LABELS: Record<string, string> = {
-  framework: "Frameworks & Libraries",
-  auth: "Authentication",
-  analytics: "Analytics",
-  "cdn-hosting": "CDN & Hosting",
-  "css-framework": "CSS Frameworks",
-  cms: "CMS & Content",
-  "chat-support": "Chat & Support",
-  payment: "Payment",
-  font: "Fonts",
-  "tag-manager": "Tag Managers",
-  monitoring: "Monitoring & Errors",
-  search: "Search",
-  video: "Video",
-  social: "Social",
-  security: "Security",
-  server: "Server & Infrastructure",
-  misc: "Other",
-}
+import { CATEGORY_LABELS, TechCategory } from "@/lib/parsers/tech-stack"
 
 const CATEGORY_ICONS: Record<string, string> = {
   framework: "\u2699",
@@ -125,7 +106,7 @@ export default function TechStackPanel({
                     {CATEGORY_ICONS[cat.category] || "\u2699"}
                   </span>
                   <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                    {CATEGORY_LABELS[cat.category] || cat.category}
+                    {CATEGORY_LABELS[cat.category as TechCategory] || cat.category}
                   </h4>
                   <span className="text-xs text-gray-400">({cat.count})</span>
                 </div>

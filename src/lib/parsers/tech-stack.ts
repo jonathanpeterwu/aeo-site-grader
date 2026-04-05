@@ -95,9 +95,9 @@ function scriptMatch(srcs: string[], pattern: RegExp): string | null {
   return null
 }
 
-// Helper: check if HTML contains a string
+// Helper: check if HTML contains a string (html is pre-lowercased, needles must be lowercase)
 function htmlContains(html: string, needle: string): string | null {
-  return html.includes(needle.toLowerCase()) ? `HTML contains "${needle}"` : null
+  return html.includes(needle) ? `HTML contains "${needle}"` : null
 }
 
 // Helper: check link hrefs
@@ -106,6 +106,14 @@ function linkMatch(hrefs: string[], pattern: RegExp): string | null {
     if (pattern.test(href)) return `link href: ${href.slice(0, 120)}`
   }
   return null
+}
+
+// Helper: check meta generator tag for a CMS/framework name
+function metaGenerator(needle: string): (ctx: MatchContext) => string | null {
+  return (ctx) => {
+    const gen = ctx.metaTags.get("generator")
+    return gen?.toLowerCase().includes(needle) ? `meta generator: ${gen}` : null
+  }
 }
 
 // ── Technology Fingerprint Database ──────────────────────────
@@ -214,10 +222,7 @@ const FINGERPRINTS: FingerprintRule[] = [
     website: "https://astro.build",
     matchers: [
       (ctx) => htmlContains(ctx.html, "astro-"),
-      (ctx) => {
-        const gen = ctx.metaTags.get("generator")
-        return gen?.toLowerCase().includes("astro") ? `meta generator: ${gen}` : null
-      },
+      metaGenerator("astro"),
     ],
   },
   {
@@ -567,10 +572,7 @@ const FINGERPRINTS: FingerprintRule[] = [
     matchers: [
       (ctx) => htmlContains(ctx.html, "wp-content"),
       (ctx) => htmlContains(ctx.html, "wp-includes"),
-      (ctx) => {
-        const gen = ctx.metaTags.get("generator")
-        return gen?.toLowerCase().includes("wordpress") ? `meta generator: ${gen}` : null
-      },
+      metaGenerator("wordpress"),
     ],
   },
   {
@@ -579,10 +581,7 @@ const FINGERPRINTS: FingerprintRule[] = [
     website: "https://webflow.com",
     matchers: [
       (ctx) => htmlContains(ctx.html, "webflow"),
-      (ctx) => {
-        const gen = ctx.metaTags.get("generator")
-        return gen?.toLowerCase().includes("webflow") ? `meta generator: ${gen}` : null
-      },
+      metaGenerator("webflow"),
     ],
   },
   {
@@ -619,10 +618,7 @@ const FINGERPRINTS: FingerprintRule[] = [
     category: "cms",
     website: "https://ghost.org",
     matchers: [
-      (ctx) => {
-        const gen = ctx.metaTags.get("generator")
-        return gen?.toLowerCase().includes("ghost") ? `meta generator: ${gen}` : null
-      },
+      metaGenerator("ghost"),
       (ctx) => htmlContains(ctx.html, "ghost-"),
     ],
   },
@@ -631,10 +627,7 @@ const FINGERPRINTS: FingerprintRule[] = [
     category: "cms",
     website: "https://gohugo.io",
     matchers: [
-      (ctx) => {
-        const gen = ctx.metaTags.get("generator")
-        return gen?.toLowerCase().includes("hugo") ? `meta generator: ${gen}` : null
-      },
+      metaGenerator("hugo"),
     ],
   },
   {
@@ -643,10 +636,7 @@ const FINGERPRINTS: FingerprintRule[] = [
     website: "https://www.drupal.org",
     matchers: [
       (ctx) => htmlContains(ctx.html, "drupal"),
-      (ctx) => {
-        const gen = ctx.metaTags.get("generator")
-        return gen?.toLowerCase().includes("drupal") ? `meta generator: ${gen}` : null
-      },
+      metaGenerator("drupal"),
     ],
   },
   {
@@ -1225,19 +1215,20 @@ export function detectTechStack(
   const seoWarnings: string[] = []
   const seoPositives: string[] = []
 
+  const SSR_FRAMEWORKS = ["Next.js", "Gatsby", "Remix", "Nuxt.js", "SvelteKit", "Astro"] as const
+  const CDN_PROVIDERS = ["Cloudflare", "Vercel", "Netlify", "AWS CloudFront", "Fastly", "Akamai"] as const
+
+  const hasSSR = SSR_FRAMEWORKS.some((f) => seen.has(f))
+  const hasCDN = CDN_PROVIDERS.some((c) => seen.has(c))
+
   // Warn: React/Vue without SSR framework
-  const hasReact = seen.has("React")
-  const hasSSR = seen.has("Next.js") || seen.has("Gatsby") || seen.has("Remix")
-  if (hasReact && !hasSSR) {
+  if (seen.has("React") && !hasSSR) {
     seoWarnings.push("React detected without SSR framework (Next.js/Gatsby/Remix) — content may not be crawlable by search engines")
   }
-  const hasVue = seen.has("Vue.js")
-  if (hasVue && !seen.has("Nuxt.js")) {
+  if (seen.has("Vue.js") && !seen.has("Nuxt.js")) {
     seoWarnings.push("Vue.js detected without Nuxt.js — ensure server-side rendering is configured for crawlability")
   }
 
-  // Warn: No CDN
-  const hasCDN = seen.has("Cloudflare") || seen.has("Vercel") || seen.has("Netlify") || seen.has("AWS CloudFront") || seen.has("Fastly") || seen.has("Akamai")
   if (!hasCDN) {
     seoWarnings.push("No CDN detected — consider adding one to reduce TTFB and improve Core Web Vitals")
   } else {
@@ -1263,7 +1254,7 @@ export function detectTechStack(
   }
 
   // Positive: SSR framework
-  if (hasSSR || seen.has("Nuxt.js") || seen.has("SvelteKit") || seen.has("Astro")) {
+  if (hasSSR) {
     seoPositives.push("SSR/SSG framework detected — content is crawlable by search engines and AI bots")
   }
 

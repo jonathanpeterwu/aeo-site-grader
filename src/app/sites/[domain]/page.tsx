@@ -3,7 +3,40 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { SiteRecord } from "@/types"
+import { SiteRecord, SiteSnapshot, TechSnapshotEntry } from "@/types"
+
+function TechChanges({
+  latest,
+  previous,
+}: {
+  latest: SiteSnapshot
+  previous: SiteSnapshot | null
+}) {
+  if (!previous || !latest.techStack?.length) return null
+  const prevTech = previous.techStack || []
+  const currentNames = new Set(latest.techStack.map((t) => t.name))
+  const prevNames = new Set(prevTech.map((t) => t.name))
+  const added = latest.techStack.filter((t) => !prevNames.has(t.name))
+  const removed = prevTech.filter((t) => !currentNames.has(t.name))
+  if (added.length === 0 && removed.length === 0) return null
+  return (
+    <div className="mt-3 border-t border-gray-100 pt-3 text-sm dark:border-gray-800">
+      <p className="mb-1 font-medium text-gray-700 dark:text-gray-300">
+        Changes since last scan:
+      </p>
+      {added.map((t) => (
+        <span key={t.name} className="mr-2 inline-flex items-center gap-1 text-green-600 dark:text-green-400">
+          + {t.name}
+        </span>
+      ))}
+      {removed.map((t) => (
+        <span key={t.name} className="mr-2 inline-flex items-center gap-1 text-red-500 dark:text-red-400">
+          - {t.name}
+        </span>
+      ))}
+    </div>
+  )
+}
 
 const gradeColor: Record<string, string> = {
   A: "text-green-600 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950 dark:border-green-800",
@@ -206,32 +239,7 @@ export default function DomainDetailPage() {
               ))}
             </div>
 
-            {/* Show tech changes if there are 2+ scans */}
-            {history.length >= 2 && (() => {
-              const prevTech = history[1]?.techStack || []
-              const currentNames = new Set(latest.techStack!.map((t) => t.name))
-              const prevNames = new Set(prevTech.map((t) => t.name))
-              const added = latest.techStack!.filter((t) => !prevNames.has(t.name))
-              const removed = prevTech.filter((t) => !currentNames.has(t.name))
-              if (added.length === 0 && removed.length === 0) return null
-              return (
-                <div className="mt-3 border-t border-gray-100 pt-3 text-sm dark:border-gray-800">
-                  <p className="mb-1 font-medium text-gray-700 dark:text-gray-300">
-                    Changes since last scan:
-                  </p>
-                  {added.map((t) => (
-                    <span key={t.name} className="mr-2 inline-flex items-center gap-1 text-green-600 dark:text-green-400">
-                      + {t.name}
-                    </span>
-                  ))}
-                  {removed.map((t) => (
-                    <span key={t.name} className="mr-2 inline-flex items-center gap-1 text-red-500 dark:text-red-400">
-                      - {t.name}
-                    </span>
-                  ))}
-                </div>
-              )
-            })()}
+            <TechChanges latest={latest} previous={history[1] ?? null} />
           </div>
         </div>
       )}
